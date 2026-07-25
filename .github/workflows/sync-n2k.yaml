@@ -1,0 +1,48 @@
+name: Sync n2k cask
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-n2k-cask
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout tap
+        uses: actions/checkout@v7
+
+      - name: Download latest generated cask
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/n2k-cask"
+          if ! gh release download \
+            --repo open-ships/n2k-cli \
+            --pattern n2k.rb \
+            --dir "$RUNNER_TEMP/n2k-cask"; then
+            echo "No published n2k cask is available yet."
+            exit 0
+          fi
+          mkdir -p Casks
+          cp "$RUNNER_TEMP/n2k-cask/n2k.rb" Casks/n2k.rb
+
+      - name: Publish changed cask
+        run: |
+          if git diff --quiet -- Casks/n2k.rb; then
+            echo "n2k cask is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/n2k.rb
+          git commit -m "Update n2k cask"
+          git push
