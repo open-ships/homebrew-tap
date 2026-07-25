@@ -37,7 +37,7 @@ jobs:
 
       - name: Publish changed cask
         run: |
-          if git diff --quiet -- Casks/n2k.rb; then
+          if ! git status --porcelain -- Casks/n2k.rb | grep -q .; then
             echo "n2k cask is already current."
             exit 0
           fi
